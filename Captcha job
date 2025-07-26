@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Captcha Typing Game with Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      text-align: center;
+      padding: 50px;
+    }
+    .box {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      display: inline-block;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 320px;
+      width: 100%;
+    }
+    .captcha-img {
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: 3px;
+      margin: 10px 0;
+      user-select: none;
+      background: #ddd;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    input[type="text"], input[type="password"] {
+      padding: 10px;
+      font-size: 16px;
+      width: 100%;
+      margin: 5px 0;
+      box-sizing: border-box;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff;
+      color: white;
+      width: 100%;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #result {
+      margin-top: 10px;
+      font-weight: bold;
+      min-height: 24px;
+    }
+    #score {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    a {
+      color: #007bff;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="box" id="loginBox">
+    <h2>Login</h2>
+    <input type="text" id="username" placeholder="Username" autocomplete="username" /><br />
+    <input type="password" id="password" placeholder="Password" autocomplete="current-password" /><br />
+    <button onclick="login()">Login</button>
+    <p>Or <a onclick="showRegister()">Register</a></p>
+  </div>
+
+  <div class="box" id="registerBox" style="display:none;">
+    <h2>Register</h2>
+    <input type="text" id="newUsername" placeholder="Choose Username" autocomplete="username" /><br />
+    <input type="password" id="newPassword" placeholder="Choose Password" autocomplete="new-password" /><br />
+    <button onclick="register()">Register</button>
+    <p>Already have an account? <a onclick="showLogin()">Login</a></p>
+  </div>
+
+  <div class="box" id="captchaBox" style="display:none;">
+    <h2>Captcha Typing</h2>
+    <p>Welcome, <span id="displayUser"></span>!</p>
+    <div class="captcha-img" id="captchaText"></div>
+    <input type="text" id="userInput" placeholder="Type the captcha" autocomplete="off" /><br />
+    <button onclick="checkCaptcha()">Submit</button>
+    <div id="result"></div>
+    <div id="score">Score: 0</div>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <script>
+    // Users stored in localStorage as { username: { password: '...', score: number } }
+    let users = JSON.parse(localStorage.getItem('captchaUsers')) || {};
+    let currentUser = null;
+    let currentCaptcha = '';
+    let score = 0;
+
+    function showRegister() {
+      document.getElementById('loginBox').style.display = 'none';
+      document.getElementById('registerBox').style.display = 'block';
+    }
+
+    function showLogin() {
+      document.getElementById('registerBox').style.display = 'none';
+      document.getElementById('loginBox').style.display = 'block';
+    }
+
+    function register() {
+      const username = document.getElementById('newUsername').value.trim();
+      const password = document.getElementById('newPassword').value.trim();
+      if (!username || !password) {
+        alert('Please fill in all fields');
+        return;
+      }
+      if (users[username]) {
+        alert('User already exists');
+        return;
+      }
+      users[username] = { password, score: 0 };
+      localStorage.setItem('captchaUsers', JSON.stringify(users));
+      alert('Registration successful! Please login.');
+      showLogin();
+    }
+
+    function login() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      if (users[username] && users[username].password === password) {
+        currentUser = username;
+        score = users[username].score || 0;
+        document.getElementById('loginBox').style.display = 'none';
+        document.getElementById('captchaBox').style.display = 'block';
+        document.getElementById('displayUser').innerText = currentUser;
+        document.getElementById('score').innerText = 'Score: ' + score;
+        generateCaptcha();
+        clearResult();
+      } else {
+        alert('Invalid username or password');
+      }
+    }
+
+    function logout() {
+      currentUser = null;
+      score = 0;
+      document.getElementById('captchaBox').style.display = 'none';
+      document.getElementById('loginBox').style.display = 'block';
+      clearInputs();
+      clearResult();
+    }
+
+    function generateCaptcha() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let captcha = '';
+      for (let i = 0; i < 6; i++) {
+        captcha += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      currentCaptcha = captcha;
+      document.getElementById('captchaText').innerText = captcha;
+    }
+
+    function checkCaptcha() {
+      const input = document.getElementById('userInput').value.trim().toUpperCase();
+      const result = document.getElementById('result');
+
+      if (input === currentCaptcha) {
+        result.style.color = 'green';
+        result.innerText = 'Correct! ✅';
+        score++;
+        users[currentUser].score = score;
+        localStorage.setItem('captchaUsers', JSON.stringify(users));
+      } else {
+        result.style.color = 'red';
+        result.innerText = 'Incorrect ❌';
+      }
+      document.getElementById('score').innerText = 'Score: ' + score;
+      generateCaptcha();
+      document.getElementById('userInput').value = '';
+    }
+
+    function clearInputs() {
+      document.getElementById('username').value = '';
+      document.getElementById('password').value = '';
+      document.getElementById('newUsername').value = '';
+      document.getElementById('newPassword').value = '';
+      document.getElementById('userInput').value = '';
+    }
+
+    function clearResult() {
+      document.getElementById('result').innerText = '';
+    }
+  </script>
+</body>
+</html>
